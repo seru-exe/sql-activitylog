@@ -16,6 +16,6 @@ async function initialize() {
     const sequelize = new Sequelize(database, user, password, { dialect: 'mysql' });
 
     db.User = require('../users/user.model')(sequelize);
-
+    db.ActivityLog = require('../users/models/activitylog.model')(sequelize);
     await sequelize.sync({ alter: true });
 }

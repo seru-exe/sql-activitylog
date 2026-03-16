@@ -9,9 +9,21 @@ module.exports = {
     update,
     delete: _delete
 };
+    
+
 
 async function logActivity(userId, actionType, ipAddress, browserInfo, updateDetails = '') {
     try {
+
+        const db = require('_helpers/db');
+
+        // Add this check to prevent the 500 error crash
+        if (!db.ActivityLog) {
+            console.error("Database not initialized: db.ActivityLog is undefined");
+            return; 
+        }
+        
+        
         // Create a new log entry in the 'activity_log' table
         await db.ActivityLog.create({
             userId,
@@ -76,12 +88,14 @@ async function update(id, params) {
 
     // Fetch the user with password hash
     const user = await db.User.scope('withHash').findByPk(id);
-
-    await logActivity(user.id, 'Register', '127.0.0.1', 'Thunder Client', 'New account created');
+   
 
     if (!user) {
         throw 'User not found';
     }
+
+     // Change 'Register' to 'Update' and change the message
+    await logActivity(user.id, 'Update', '127.0.0.1', 'Thunder Client', `User updated: ${user.email}`);
 
     // Check if username has changed and is available
     const usernameChanged = updateFields.username && user.username !== updateFields.username;
@@ -118,6 +132,9 @@ async function update(id, params) {
 
 async function _delete(id) {
     const user = await getUser(id);
+
+    await logActivity(user.id, 'Delete', '127.0.0.1', 'Thunder Client', `Account deleted for ${user.email}`);
+
     await user.destroy();
 }
 
