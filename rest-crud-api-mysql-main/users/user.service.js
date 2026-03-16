@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const db = require('_helpers/db');
 
@@ -8,6 +9,46 @@ module.exports = {
     update,
     delete: _delete
 };
+
+async function logActivity(userId, actionType, ipAddress, browserInfo, updateDetails = '') {
+    try {
+        // Create a new log entry in the 'activity_log' table
+        await db.ActivityLog.create({
+            userId,
+            actionType,
+            actionDetails: `IP Address: ${ipAddress}, Browser Info: ${browserInfo}, Details: ${updateDetails}`,
+            timestamp: new Date()
+        });
+
+        // Count the number of logs for the user
+        const logCount = await db.ActivityLog.count({ where: { userId } });
+
+        if (logCount > 10) {
+            // Find and delete the oldest logs
+            const logsToDelete = await db.ActivityLog.findAll({
+                where: { userId },
+                order: [['timestamp', 'ASC']], 
+                limit: logCount - 10 
+            });
+
+            if (logsToDelete.length > 0) {
+                const logIdsToDelete = logsToDelete.map(log => log.id);
+
+                await db.ActivityLog.destroy({
+                    where: {
+                        id: {
+                            [Op.in]: logIdsToDelete
+                        }
+                    }
+                });
+                console.log(`Deleted ${logIdsToDelete.length} oldest log(s) for user ${userId}.`);
+            }
+        }
+    } catch (error) {
+        console.error('Error logging activity:', error);
+        throw error;
+    }
+}
 
 async function getAll() {
     return await db.User.findAll();
@@ -35,6 +76,8 @@ async function update(id, params) {
 
     // Fetch the user with password hash
     const user = await db.User.scope('withHash').findByPk(id);
+
+    await logActivity(user.id, 'Register', '127.0.0.1', 'Thunder Client', 'New account created');
 
     if (!user) {
         throw 'User not found';

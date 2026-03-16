@@ -65,7 +65,8 @@ function updateSchema(req, res, next) {
         profilePic: Joi.string().empty(''),
         currentPassword: Joi.string().min(6).optional(),
         newPassword: Joi.string().min(6).optional(),
-        confirmPassword: Joi.string().valid(Joi.ref('newPassword')).optional()
+        confirmPassword: Joi.string().valid(Joi.ref('newPassword')).optional(),
+        updatelog:Joi.string().min(6).optional(),
     }).with('newPassword', 'confirmPassword');
     validateRequest(req, next, schema);
 }   
